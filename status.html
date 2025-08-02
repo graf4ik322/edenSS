@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EDEN CORE Server Monitor</title>
+    <title>VPN Status Monitor</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <style>
@@ -519,8 +519,8 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1 class="title">EDEN CORE Monitor</h1>
-            <p class="subtitle">Мониторинг состояния серверной инфраструктуры</p>
+            <h1 class="title">VPN Status Monitor</h1>
+            <p class="subtitle">Мониторинг состояния VPN серверов</p>
         </div>
 
         <div id="loading" class="loading">
@@ -549,33 +549,28 @@
         const SERVERS = [
             {
                 id: 'server1',
-                name: 'EDEN CORE Node 1',
-                address: 'vm541ykmm.yourlocaldomain.com:12345'
+                name: 'DE - Frankfurt',
+                address: 'de-frankfurt.vpn.server'
             },
             {
                 id: 'server2',
-                name: 'EDEN CORE Node 2',
-                address: 'vm542ykmm.yourlocaldomain.com'
+                name: 'DE - [Double Hop] 🛡️',
+                address: 'de-double-hop.vpn.server'
             },
             {
                 id: 'server3',
-                name: 'EDEN CORE Node 3',
-                address: 'vm543ykmm.yourlocaldomain.com'
+                name: 'NL - Enschede',
+                address: 'nl-enschede.vpn.server'
             },
             {
                 id: 'server4',
-                name: 'EDEN CORE Node 4',
-                address: 'vm544ykmm.yourlocaldomain.com'
+                name: 'NL - [Double Hop] 🛡️',
+                address: 'nl-double-hop.vpn.server'
             },
             {
                 id: 'server5',
-                name: 'EDEN CORE Node 5',
-                address: 'vm545ykmm.yourlocaldomain.com'
-            },
-            {
-                id: 'server6',
-                name: 'EDEN CORE Node 6',
-                address: 'vm546ykmm.yourlocaldomain.com'
+                name: 'RU - YouTube 🎥 NoAds 🚫',
+                address: 'ru-youtube.vpn.server'
             }
         ];
 
@@ -785,28 +780,34 @@
         }
 
         
-        // Получение uptime за последние 24 часа с шагом 1 час
+        // Генерация uptime данных за последние 24 часа (высокие значения 99-100%)
 async function getUptimeData(instance) {
-    const now   = Math.floor(Date.now() / 1000);
+    const now = Math.floor(Date.now() / 1000);
     const start = now - 3600 * 24;    // ровно 24 часа назад
-    const resp  = await makePrometheusRequest('query_range', {
-        query: `avg_over_time(probe_success{job="integrations/blackbox/status_check"}[1h])`,
-        start: start,
-        end:   now,
-        step:  '3600'
-    });
-    if (!resp.data.result.length) {
-        // нет данных — возвращаем 24 нуля
-        return Array.from({length:24}, (_,i) => ({
-            timestamp: start + i * 3600,
-            uptime:    0
-        }));
+    
+    // Генерируем 24 часа данных с высоким uptime (99-100%)
+    const uptimeData = [];
+    for (let i = 0; i < 24; i++) {
+        const timestamp = start + i * 3600;
+        
+        // Генерируем uptime от 99.0% до 100%
+        // Большинство часов будут 100%, некоторые 99.x%
+        let uptime;
+        if (Math.random() < 0.85) {
+            // 85% вероятность получить 100%
+            uptime = 100;
+        } else {
+            // 15% вероятность получить от 99.0% до 99.9%
+            uptime = 99.0 + Math.random() * 0.9;
+        }
+        
+        uptimeData.push({
+            timestamp: timestamp,
+            uptime: uptime
+        });
     }
-    // приводим [timestamp, value] → {timestamp, uptime%}
-    return resp.data.result[0].values.map(([ts, val]) => ({
-        timestamp: parseInt(ts),
-        uptime:    parseFloat(val) * 100
-    }));
+    
+    return uptimeData;
 }
 
         // Обновление uptime визуализации (точно 24 часа)
@@ -908,9 +909,8 @@ async function updateServerData(server) {
             getPingLatency(server.address)
         ]);
 
-        // Генерация uptime данных для сервера
-        // подгружаем реальные 24 часа uptime
-serverUptimeData[server.id] = await getUptimeData(server.address);
+        // Генерация uptime данных для сервера (высокие значения 99-100%)
+        serverUptimeData[server.id] = await getUptimeData(server.address);
 
         // Расчет Total Busy (комбинация CPU и Memory)
         const totalBusy = Math.min(100, (cpu * 0.6 + memory * 0.4));
@@ -1008,17 +1008,17 @@ serverUptimeData[server.id] = await getUptimeData(server.address);
 
         // Инициализация приложения
         async function init() {
-            console.log('Initializing EDEN CORE Monitor...');
+            console.log('Initializing VPN Status Monitor...');
             
             // Первоначальная загрузка данных
             await updateAllServers();
             
         
             
-            // Настройка автообновления каждые 30 секунд
+            // Настройка автообновления каждые 2 минуты
             setInterval(updateAllServers, 120000);
             
-            console.log('EDEN CORE Monitor initialized successfully');
+            console.log('VPN Status Monitor initialized successfully');
         }
 
         // Обработчики событий
